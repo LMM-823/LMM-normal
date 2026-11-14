@@ -166,6 +166,19 @@ end
 local TracerBtn, TracerTrack, TracerKnob = createToggleSwitch(MainFrame, 12, 45, 130, 32, "Tracer ESP")
 local BoxBtn, BoxTrack, BoxKnob = createToggleSwitch(MainFrame, 12, 85, 130, 32, "Box ESP")
 
+-- 在左侧 ESP 按钮下方新增的提示文本标签
+local MobileNoticeLabel = Instance.new("TextLabel")
+MobileNoticeLabel.Size = UDim2.new(0, 130, 0, 40)
+MobileNoticeLabel.Position = UDim2.new(0, 12, 0, 125)
+MobileNoticeLabel.BackgroundTransparency = 1
+MobileNoticeLabel.Text = "Mobile Not Support ESP & Fly"
+MobileNoticeLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+MobileNoticeLabel.TextSize = 10
+MobileNoticeLabel.Font = Enum.Font.GothamBold
+MobileNoticeLabel.TextWrapped = true
+MobileNoticeLabel.TextXAlignment = Enum.TextXAlignment.Center
+MobileNoticeLabel.Parent = MainFrame
+
 -- ==================== 中间：走路速度、穿墙、无限跳、冰冻与最下方的飞行模式 ====================
 local WalkBtn, WalkTrack, WalkKnob = createToggleSwitch(MainFrame, 163, 45, 130, 32, "WalkSpeed")
 local NoclipBtn, NoclipTrack, NoclipKnob = createToggleSwitch(MainFrame, 163, 82, 130, 32, "Noclip")
@@ -328,6 +341,7 @@ MinimizeButton.MouseButton1Click:Connect(function()
         TopDivider.Visible = false
         TracerBtn.Visible = false
         BoxBtn.Visible = false
+        MobileNoticeLabel.Visible = false
         WalkBtn.Visible = false
         NoclipBtn.Visible = false
         InfJumpBtn.Visible = false
@@ -355,6 +369,7 @@ MinimizeButton.MouseButton1Click:Connect(function()
         TopDivider.Visible = true
         TracerBtn.Visible = true
         BoxBtn.Visible = true
+        MobileNoticeLabel.Visible = true
         WalkBtn.Visible = true
         NoclipBtn.Visible = true
         InfJumpBtn.Visible = true
