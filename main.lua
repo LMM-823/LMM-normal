@@ -166,14 +166,18 @@ end
 local TracerBtn, TracerTrack, TracerKnob = createToggleSwitch(MainFrame, 12, 45, 130, 32, "Tracer ESP")
 local BoxBtn, BoxTrack, BoxKnob = createToggleSwitch(MainFrame, 12, 85, 130, 32, "Box ESP")
 
--- ==================== 中间：走路速度、穿墙与飞行控制区域 ====================
+-- ==================== 中间：走路速度、穿墙、无限跳、冰冻与最下方的飞行模式 ====================
 local WalkBtn, WalkTrack, WalkKnob = createToggleSwitch(MainFrame, 163, 45, 130, 32, "WalkSpeed")
 local NoclipBtn, NoclipTrack, NoclipKnob = createToggleSwitch(MainFrame, 163, 82, 130, 32, "Noclip")
-local FlyBtn, FlyTrackBarColor, FlyKnob = createToggleSwitch(MainFrame, 163, 125, 130, 32, "Fly Mode")
+local InfJumpBtn, InfJumpTrack, InfJumpKnob = createToggleSwitch(MainFrame, 163, 119, 130, 32, "Infinite Jump")
+local FreezeBtn, FreezeTrack, FreezeKnob = createToggleSwitch(MainFrame, 163, 156, 130, 32, "Freeze")
+
+-- 飞行模式放最下面
+local FlyBtn, FlyTrackBarColor, FlyKnob = createToggleSwitch(MainFrame, 163, 193, 130, 32, "Fly Mode")
 
 local UpButton = Instance.new("TextButton")
 UpButton.Size = UDim2.new(0, 62, 0, 26)
-UpButton.Position = UDim2.new(0.36, 0, 0, 165)
+UpButton.Position = UDim2.new(0.36, 0, 0, 230)
 UpButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 UpButton.BackgroundTransparency = 0.3
 UpButton.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -183,7 +187,7 @@ UpButton.Parent = MainFrame
 
 local DownButton = Instance.new("TextButton")
 DownButton.Size = UDim2.new(0, 62, 0, 26)
-DownButton.Position = UDim2.new(0.525, 0, 0, 165)
+DownButton.Position = UDim2.new(0.525, 0, 0, 230)
 DownButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 DownButton.BackgroundTransparency = 0.3
 DownButton.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -191,7 +195,7 @@ DownButton.Text = "▼ Down"
 DownButton.TextSize, DownButton.Font = 10, Enum.Font.GothamBold
 DownButton.Parent = MainFrame
 
--- ==================== 右侧：走路速度滑块 + 飞行速度滑块 + 统一在下方的颜色盘 ====================
+-- ==================== 右侧：走路速度滑块 + 飞行速度滑块 + 颜色盘 ====================
 local WalkSpeedLabel = Instance.new("TextLabel")
 WalkSpeedLabel.Size = UDim2.new(0, 135, 0, 20)
 WalkSpeedLabel.Position = UDim2.new(0.69, 0, 0, 45)
@@ -246,7 +250,7 @@ FlyThumb.Text = ""
 FlyThumb.BorderSizePixel = 0
 FlyThumb.Parent = FlyTrackBar
 
--- 射线颜色标签（在飞行速度滑块下方）
+-- 射线颜色标签
 local TracerColorLabel = Instance.new("TextLabel")
 TracerColorLabel.Size = UDim2.new(0, 135, 0, 15)
 TracerColorLabel.Position = UDim2.new(0.69, 0, 0, 125)
@@ -279,7 +283,7 @@ TracerColorRed.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 TracerColorRed.Text = ""
 TracerColorRed.Parent = MainFrame
 
--- 方框颜色标签（在射线颜色下方）
+-- 方框颜色标签
 local BoxColorLabel = Instance.new("TextLabel")
 BoxColorLabel.Size = UDim2.new(0, 135, 0, 15)
 BoxColorLabel.Position = UDim2.new(0.69, 0, 0, 165)
@@ -326,6 +330,8 @@ MinimizeButton.MouseButton1Click:Connect(function()
         BoxBtn.Visible = false
         WalkBtn.Visible = false
         NoclipBtn.Visible = false
+        InfJumpBtn.Visible = false
+        FreezeBtn.Visible = false
         FlyBtn.Visible = false
         UpButton.Visible = false
         DownButton.Visible = false
@@ -351,6 +357,8 @@ MinimizeButton.MouseButton1Click:Connect(function()
         BoxBtn.Visible = true
         WalkBtn.Visible = true
         NoclipBtn.Visible = true
+        InfJumpBtn.Visible = true
+        FreezeBtn.Visible = true
         FlyBtn.Visible = true
         UpButton.Visible = true
         DownButton.Visible = true
@@ -369,7 +377,223 @@ MinimizeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==================== ESP 核心逻辑 ====================
+-- ==================== 功能实现逻辑 ====================
+
+-- 1. 走路速度逻辑
+local walkActive = false
+WalkBtn.MouseButton1Click:Connect(function()
+    walkActive = not walkActive
+    if walkActive then
+        WalkTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        WalkKnob.Position = UDim2.new(1, -14, 0.5, -6)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = currentWalkSpeed
+        end
+    else
+        WalkTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        WalkKnob.Position = UDim2.new(0, 2, 0.5, -6)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+-- 2. 穿墙逻辑
+local noclipActive = false
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclipActive = not noclipActive
+    if noclipActive then
+        NoclipTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        NoclipKnob.Position = UDim2.new(1, -14, 0.5, -6)
+    else
+        NoclipTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        NoclipKnob.Position = UDim2.new(0, 2, 0.5, -6)
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if noclipActive and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- 3. 无限跳逻辑
+local infJumpActive = false
+InfJumpBtn.MouseButton1Click:Connect(function()
+    infJumpActive = not infJumpActive
+    if infJumpActive then
+        InfJumpTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        InfJumpKnob.Position = UDim2.new(1, -14, 0.5, -6)
+    else
+        InfJumpTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        InfJumpKnob.Position = UDim2.new(0, 2, 0.5, -6)
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if infJumpActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- 4. 冰冻逻辑 (完美彻底修复：锁死坐标和CFrame，绝无任何掉落或下坠动画)
+local freezeActive = false
+local freezeConnection = nil
+local frozenCFrame = nil
+
+FreezeBtn.MouseButton1Click:Connect(function()
+    freezeActive = not freezeActive
+    if freezeActive then
+        FreezeTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        FreezeKnob.Position = UDim2.new(1, -14, 0.5, -6)
+        
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = LocalPlayer.Character.HumanoidRootPart
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            
+            frozenCFrame = rootPart.CFrame
+            rootPart.Anchored = true
+            if humanoid then
+                humanoid.PlatformStand = true
+            end
+            
+            -- 每一帧强行把位置定格在开启瞬间的 CFrame 上，彻底消除任何掉落倾向
+            freezeConnection = RunService.RenderStepped:Connect(function()
+                if freezeActive and rootPart and rootPart.Parent and frozenCFrame then
+                    rootPart.CFrame = frozenCFrame
+                    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        end
+    else
+        FreezeTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        FreezeKnob.Position = UDim2.new(0, 2, 0.5, -6)
+        
+        if freezeConnection then
+            freezeConnection:Disconnect()
+            freezeConnection = nil
+        end
+        
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = LocalPlayer.Character.HumanoidRootPart
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            
+            rootPart.Anchored = false
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+            frozenCFrame = nil
+        end
+    end
+end)
+
+-- 5. 滑块拖动逻辑
+local draggingFly, draggingWalk = false, false
+FlyThumb.MouseButton1Down:Connect(function() draggingFly = true end)
+WalkThumb.MouseButton1Down:Connect(function() draggingWalk = true end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingFly = false
+        draggingWalk = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        local pos = input.Position.X
+        
+        if draggingFly then
+            local tPos = FlyTrackBar.AbsolutePosition.X
+            local tSize = FlyTrackBar.AbsoluteSize.X
+            local scale = math.clamp((pos - tPos) / tSize, 0, 1)
+            FlyThumb.Position = UDim2.new(scale, -7, 0.5, -7)
+            currentFlySpeed = math.floor(minFlySpeed + (maxFlySpeed - minFlySpeed) * scale)
+            FlySpeedLabel.Text = "Fly Speed: " .. currentFlySpeed
+        end
+        
+        if draggingWalk then
+            local tPos = WalkTrackBar.AbsolutePosition.X
+            local tSize = WalkTrackBar.AbsoluteSize.X
+            local scale = math.clamp((pos - tPos) / tSize, 0, 1)
+            WalkThumb.Position = UDim2.new(scale, -7, 0.5, -7)
+            currentWalkSpeed = math.floor(minWalkSpeed + (maxWalkSpeed - minWalkSpeed) * scale)
+            WalkSpeedLabel.Text = "Walk Speed: " .. currentWalkSpeed
+            
+            if walkActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = currentWalkSpeed
+            end
+        end
+    end
+end)
+
+-- 6. 飞行逻辑
+local active = false
+local bv, bodyGyroFly = nil, nil
+local connection = nil
+local isUpPressed, isDownPressed = false
+
+UpButton.MouseButton1Down:Connect(function() isUpPressed = true end)
+UpButton.MouseButton1Up:Connect(function() isUpPressed = false end)
+DownButton.MouseButton1Down:Connect(function() isDownPressed = true end)
+DownButton.MouseButton1Up:Connect(function() isDownPressed = false end)
+
+local function toggleFlight()
+    active = not active
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
+    local rootPart = char.HumanoidRootPart
+    local humanoid = char.Humanoid
+    
+    if active then
+        FlyTrackBarColor.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        FlyKnob.Position = UDim2.new(1, -14, 0.5, -6)
+        humanoid.PlatformStand = true
+        
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = rootPart
+        
+        bodyGyroFly = Instance.new("BodyGyro")
+        bodyGyroFly.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyroFly.CFrame = rootPart.CFrame
+        bodyGyroFly.Parent = rootPart
+        
+        connection = RunService.RenderStepped:Connect(function()
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local camera = workspace.CurrentCamera
+            local moveDir = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or isUpPressed then moveDir = moveDir + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or isDownPressed then moveDir = moveDir - Vector3.new(0, 1, 0) end
+            
+            bv.Velocity = moveDir * currentFlySpeed
+            bodyGyroFly.CFrame = camera.CFrame
+        end)
+    else
+        FlyTrackBarColor.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        FlyKnob.Position = UDim2.new(0, 2, 0.5, -6)
+        if humanoid then humanoid.PlatformStand = false end
+        if connection then connection:Disconnect() connection = nil end
+        if bv then bv:Destroy() bv = nil end
+        if bodyGyroFly then bodyGyroFly:Destroy() bodyGyroFly = nil end
+        isUpPressed, isDownPressed = false, false
+    end
+end
+
+FlyBtn.MouseButton1Click:Connect(toggleFlight)
+
+-- 7. ESP 颜色与逻辑
 local tracerActive = false
 local boxActive = false
 local tracerColor = Color3.fromRGB(255, 255, 255)
@@ -473,146 +697,3 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
--- ==================== 走路速度开关逻辑 ====================
-local walkActive = false
-WalkBtn.MouseButton1Click:Connect(function()
-    walkActive = not walkActive
-    if walkActive then
-        WalkTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        WalkKnob.Position = UDim2.new(1, -14, 0.5, -6)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = currentWalkSpeed
-        end
-    else
-        WalkTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        WalkKnob.Position = UDim2.new(0, 2, 0.5, -6)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = 16
-        end
-    end
-end)
-
--- 穿墙逻辑
-local noclipActive = false
-NoclipBtn.MouseButton1Click:Connect(function()
-    noclipActive = not noclipActive
-    if noclipActive then
-        NoclipTrack.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        NoclipKnob.Position = UDim2.new(1, -14, 0.5, -6)
-    else
-        NoclipTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        NoclipKnob.Position = UDim2.new(0, 2, 0.5, -6)
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if noclipActive and LocalPlayer.Character then
-        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
--- 滑块拖动逻辑
-local draggingFly, draggingWalk = false, false
-FlyThumb.MouseButton1Down:Connect(function() draggingFly = true end)
-WalkThumb.MouseButton1Down:Connect(function() draggingWalk = true end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingFly = false
-        draggingWalk = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        local pos = input.Position.X
-        
-        if draggingFly then
-            local tPos = FlyTrackBar.AbsolutePosition.X
-            local tSize = FlyTrackBar.AbsoluteSize.X
-            local scale = math.clamp((pos - tPos) / tSize, 0, 1)
-            FlyThumb.Position = UDim2.new(scale, -7, 0.5, -7)
-            currentFlySpeed = math.floor(minFlySpeed + (maxFlySpeed - minFlySpeed) * scale)
-            FlySpeedLabel.Text = "Fly Speed: " .. currentFlySpeed
-        end
-        
-        if draggingWalk then
-            local tPos = WalkTrackBar.AbsolutePosition.X
-            local tSize = WalkTrackBar.AbsoluteSize.X
-            local scale = math.clamp((pos - tPos) / tSize, 0, 1)
-            WalkThumb.Position = UDim2.new(scale, -7, 0.5, -7)
-            currentWalkSpeed = math.floor(minWalkSpeed + (maxWalkSpeed - minWalkSpeed) * scale)
-            WalkSpeedLabel.Text = "Walk Speed: " .. currentWalkSpeed
-            
-            if walkActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                LocalPlayer.Character.Humanoid.WalkSpeed = currentWalkSpeed
-            end
-        end
-    end
-end)
-
--- 飞行逻辑
-local active = false
-local bv, bodyGyroFly = nil, nil
-local connection = nil
-local isUpPressed, isDownPressed = false
-
-UpButton.MouseButton1Down:Connect(function() isUpPressed = true end)
-UpButton.MouseButton1Up:Connect(function() isUpPressed = false end)
-DownButton.MouseButton1Down:Connect(function() isDownPressed = true end)
-DownButton.MouseButton1Up:Connect(function() isDownPressed = false end)
-
-local function toggleFlight()
-    active = not active
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
-    local rootPart = char.HumanoidRootPart
-    local humanoid = char.Humanoid
-    
-    if active then
-        FlyTrackBarColor.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        FlyKnob.Position = UDim2.new(1, -14, 0.5, -6)
-        humanoid.PlatformStand = true
-        
-        bv = Instance.new("BodyVelocity")
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.Parent = rootPart
-        
-        bodyGyroFly = Instance.new("BodyGyro")
-        bodyGyroFly.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        bodyGyroFly.CFrame = rootPart.CFrame
-        bodyGyroFly.Parent = rootPart
-        
-        connection = RunService.RenderStepped:Connect(function()
-            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-            local camera = workspace.CurrentCamera
-            local moveDir = Vector3.new(0, 0, 0)
-            
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or isUpPressed then moveDir = moveDir + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or isDownPressed then moveDir = moveDir - Vector3.new(0, 1, 0) end
-            
-            bv.Velocity = moveDir * currentFlySpeed
-            bodyGyroFly.CFrame = camera.CFrame
-        end)
-    else
-        FlyTrackBarColor.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        FlyKnob.Position = UDim2.new(0, 2, 0.5, -6)
-        if humanoid then humanoid.PlatformStand = false end
-        if connection then connection:Disconnect() connection = nil end
-        if bv then bv:Destroy() bv = nil end
-        if bodyGyroFly then bodyGyroFly:Destroy() bodyGyroFly = nil end
-        isUpPressed, isDownPressed = false, false
-    end
-end
-
-FlyBtn.MouseButton1Click:Connect(toggleFlight)
